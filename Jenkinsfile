@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         DOCKER_REGISTRY = "167.71.164.51:8082"
-        DOCKER_IMAGE = "api_pedidos3"
+        DOCKER_IMAGE = "api_pedidos"
         DOCKER_TAG = "latest"
         SERVER_USER = "root"
         SERVER_IP = "167.71.164.51"
@@ -31,18 +31,18 @@ pipeline {
         stage('Deploy to Server') {
     steps {
         sshagent(credentials: ['ssh-server-credentials']) {
-    sh """
-    ssh -t root@167.71.164.51 <<EOF
-    docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-    docker stop $DOCKER_IMAGE || true
-    docker rm $DOCKER_IMAGE || true
-    docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-    EOF
-    """
-}
-
+            sh """
+            ssh -i /var/jenkins_home/.ssh/angel root@167.71.164.51 <<'EOF'
+            docker pull 167.71.164.51:8082/api_pedidos:latest
+            docker stop api_pedidos || true
+            docker rm api_pedidos || true
+            docker run -d -p 8000:8000 --name api_pedidos 167.71.164.51:8082/api_pedidos:latest
+            EOF
+            """
+        }
     }
 }
+
 
     }
 }
