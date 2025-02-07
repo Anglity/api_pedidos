@@ -1,68 +1,46 @@
 pipeline {
     agent any
-
     environment {
-        DOCKER_IMAGE = "angelalvarez0210/api_pedidos"
+        DOCKER_REGISTRY = "167.71.164.51:8082"
+        DOCKER_IMAGE = "api_pedidos3"
         DOCKER_TAG = "latest"
-        NEXUS_REPO = "http://209.97.159.2:8081/repository/docker-repo/"
-        SERVER_IP = "209.97.159.2"
-        SSH_KEY = credentials('ssh-key-id')
+        SERVER_USER = "root"
+        SERVER_IP = "167.71.164.51"
     }
-
     stages {
         stage('Checkout') {
             steps {
-                git branch: "${env.BRANCH_NAME}", credentialsId: 'github-credentials', url: "https://github.com/Anglity/api_pedidos.git"
+                git branch: 'develop', url: 'https://github.com/Anglity/api_pedidos.git'
             }
         }
-
         stage('Build Docker Image') {
-            when {
-                not { branch 'main' }
-            }
             steps {
-                sh """
-                docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
-                """
+                sh "docker build -t $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG ."
             }
         }
-
+        stage('Login to Nexus') {
+            steps {
+                sh "echo 'Angel2610' | docker login -u admin --password-stdin http://$DOCKER_REGISTRY"
+            }
+        }
         stage('Push to Nexus') {
-            when {
-                not { branch 'main' }
-            }
             steps {
-                sh """
-                docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${NEXUS_REPO}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                docker push ${NEXUS_REPO}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                """
+                sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG"
             }
         }
-
         stage('Deploy to Server') {
-            when {
-                branch 'main'
-            }
             steps {
-                sshagent(['ssh-key-id']) {
+                sshagent(credentials: ['ssh-server-credentials']) {
                     sh """
-                    ssh root@${SERVER_IP} <<EOF
-                    docker pull ${NEXUS_REPO}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                    docker stop api_pedidos || true
-                    docker run -d -p 8000:8000 --name api_pedidos ${NEXUS_REPO}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                    ssh $SERVER_USER@$SERVER_IP <<EOF
+                    docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                    docker stop $DOCKER_IMAGE || true
+                    docker rm $DOCKER_IMAGE || true
+                    docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
                     EOF
                     """
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Despliegue exitoso en la rama main!"
-        }
-        failure {
-            echo "❌ Error en el despliegue"
         }
     }
 }
