@@ -34,15 +34,20 @@ pipeline {
         }
         stage('Deploy to Server') {
             steps {
-                sshagent(credentials: ['ssh-server-credentials']) {
-                    sh '''
-                        ssh -i /var/jenkins_home/.ssh/angel root@167.71.164.51 <<-EOF
+                script {
+                    def remote = [
+                        name: 'targetServer',
+                        host: SERVER_IP,
+                        user: SERVER_USER,
+                        identityFile: '/var/jenkins_home/.ssh/id_rsa'
+                        allowAnyHosts: true
+                    ]
+                    sshCommand remote: remote, command: """
                         docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
                         docker stop $DOCKER_IMAGE || true
                         docker rm $DOCKER_IMAGE || true
                         docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-                        EOF
-                    '''
+                    """
                 }
             }
         }
