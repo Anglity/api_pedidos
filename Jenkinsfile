@@ -32,7 +32,7 @@ pipeline {
     steps {
         sshagent(credentials: ['ssh-server-credentials']) {
             sh """
-            ssh -i /var/jenkins_home/.ssh/angel root@167.71.164.51 <<'EOF'
+            ssh -i /var/jenkins_home/.ssh/angel root@167.71.164.51 <<EOF
             docker pull 167.71.164.51:8082/api_pedidos:latest
             docker stop api_pedidos || true
             docker rm api_pedidos || true
@@ -42,6 +42,7 @@ pipeline {
         }
     }
 }
+
 
 
     }
