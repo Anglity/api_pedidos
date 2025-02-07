@@ -10,42 +10,52 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Checkout from the 'develop' branch
+                echo "Checking out from GitHub..."
                 git branch: 'develop', url: 'https://github.com/Anglity/api_pedidos.git'
             }
         }
         stage('Build Docker Image') {
             steps {
-                // Build Docker image
+                echo "Building Docker image..."
                 sh "docker build -t $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG ."
             }
         }
         stage('Login to Nexus') {
             steps {
-                // Login to Docker registry (Nexus)
+                echo "Logging into Nexus..."
                 sh "echo 'Angel2610' | docker login -u admin --password-stdin http://$DOCKER_REGISTRY"
             }
         }
         stage('Push to Nexus') {
             steps {
-                // Push the built image to Nexus
+                echo "Pushing image to Nexus..."
                 sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG"
             }
         }
         stage('Deploy to Server') {
-    steps {
-        sshagent(credentials: ['ssh-server-credentials']) {
-            sh """
-            ssh -i /var/jenkins_home/.ssh/angel root@167.71.164.51 <<EOF
-            docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-            docker stop $DOCKER_IMAGE || true
-            docker rm $DOCKER_IMAGE || true
-            docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-            EOF
-            """
+            steps {
+                sshagent(credentials: ['ssh-server-credentials']) {
+                    sh """
+                    echo "Deploying to server..."
+                    ssh -i /var/jenkins_home/.ssh/angel root@167.71.164.51 << 'EOF'
+                    set -e  # Habilitar salida en caso de error
+                    echo "Pulling latest Docker image..."
+                    docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                    
+                    echo "Stopping and removing existing container..."
+                    docker stop $DOCKER_IMAGE || true
+                    docker rm $DOCKER_IMAGE || true
+                    
+                    echo "Releasing port 8000 if occupied..."
+                    fuser -k 8000/tcp || true
+                    
+                    echo "Running new container..."
+                    docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                    echo "Deployment successful!"
+                    EOF
+                    """
+                }
+            }
         }
-    }
-}
-
     }
 }
