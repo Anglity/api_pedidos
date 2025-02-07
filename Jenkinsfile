@@ -33,22 +33,19 @@ pipeline {
             }
         }
         stage('Deploy to Server') {
-            steps {
-                sshagent(credentials: ['ssh-server-credentials']) {
-                    sh """
-                    ssh -i /var/jenkins_home/.ssh/angel $SERVER_USER@$SERVER_IP <<EOF
-                    # Pull the latest Docker image
-                    docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-                    # Stop the running container if exists
-                    docker stop $DOCKER_IMAGE || true
-                    # Remove the stopped container
-                    docker rm $DOCKER_IMAGE || true
-                    # Run the container in detached mode with port forwarding
-                    docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-                    EOF
-                    """
-                }
-            }
+    steps {
+        sshagent(credentials: ['ssh-server-credentials']) {
+            sh """
+            ssh -i /var/jenkins_home/.ssh/angel root@167.71.164.51 <<EOF
+            docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+            docker stop $DOCKER_IMAGE || true
+            docker rm $DOCKER_IMAGE || true
+            docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+            EOF
+            """
         }
+    }
+}
+
     }
 }
