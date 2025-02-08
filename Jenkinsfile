@@ -1,42 +1,65 @@
 pipeline {
     agent any
+
     environment {
+        IMAGE_NAME = "167.71.164.51:8082/api_pedidos"
         DOCKER_REGISTRY = "167.71.164.51:8082"
-        DOCKER_IMAGE = "api_pedidos3"
-        DOCKER_TAG = "latest"
-        SERVER_USER = "root"
         SERVER_IP = "167.71.164.51"
+        SSH_CREDENTIALS = "server-ssh-key"  // ID de las credenciales SSH en Jenkins
     }
+
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
+                echo "📥 Clonando código fuente desde GitHub..."
                 git branch: 'develop', url: 'https://github.com/Anglity/api_pedidos.git'
             }
         }
+
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG ."
+                echo "🔨 Construyendo imagen Docker..."
+                sh "docker build -t ${IMAGE_NAME}:latest ."
             }
         }
-        stage('Login to Nexus') {
+
+        stage('Push Image to Nexus') {
             steps {
-                sh "echo 'Angel2610' | docker login -u admin --password-stdin http://$DOCKER_REGISTRY"
+                echo "📤 Subiendo imagen a Nexus..."
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh """
+                        echo "🔑 Iniciando sesión en Nexus..."
+                        docker login -u $NEXUS_USER -p $NEXUS_PASS ${DOCKER_REGISTRY}
+
+                        echo "🏷️ Etiquetando la imagen para Nexus..."
+                        docker tag ${IMAGE_NAME}:latest ${DOCKER_REGISTRY}/api_pedidos:latest
+
+                        echo "🚀 Pushing la imagen a Nexus..."
+                        docker push ${DOCKER_REGISTRY}/api_pedidos:latest
+                    """
+                }
             }
         }
-        stage('Push to Nexus') {
-            steps {
-                sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG"
-            }
-        }
+
         stage('Deploy to Server') {
             steps {
-                sshagent(credentials: ['ssh-server-credentials']) {
+                echo "🚀 Desplegando aplicación en el servidor..."
+                sshagent([SSH_CREDENTIALS]) {
                     sh """
-                    ssh $SERVER_USER@$SERVER_IP <<EOF
-                    docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-                    docker stop $DOCKER_IMAGE || true
-                    docker rm $DOCKER_IMAGE || true
-                    docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                    ssh -o StrictHostKeyChecking=no root@${SERVER_IP} << 'EOF'
+                    echo "📥 Pulling la última imagen de Docker..."
+                    docker pull ${DOCKER_REGISTRY}/api_pedidos:latest
+
+                    echo "🛑 Deteniendo el contenedor existente (si existe)..."
+                    docker stop api_pedidos || true
+
+                    echo "🗑️ Eliminando contenedor antiguo (si existe)..."
+                    docker rm api_pedidos || true
+
+                    echo "🏃‍♂️ Iniciando nuevo contenedor..."
+                    docker run -d --restart unless-stopped --name api_pedidos -p 8000:8000 ${DOCKER_REGISTRY}/api_pedidos:latest
+
+                    echo "✅ Despliegue completado exitosamente!"
                     EOF
                     """
                 }
