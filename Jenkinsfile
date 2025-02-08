@@ -24,21 +24,17 @@ pipeline {
             }
         }
 
-        stage('Push Image to Nexus') {
+        stage('Login to Nexus') {
             steps {
-                echo "📤 Subiendo imagen a Nexus..."
-                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
-                    sh """
-                        echo "🔑 Iniciando sesión en Nexus..."
-                        docker login -u $NEXUS_USER -p $NEXUS_PASS ${DOCKER_REGISTRY}
+                echo "Logging into Nexus..."
+                sh "echo 'Angel2610' | docker login -u admin --password-stdin http://$DOCKER_REGISTRY"
+            }
+        }
 
-                        echo "🏷️ Etiquetando la imagen para Nexus..."
-                        docker tag ${IMAGE_NAME}:latest ${DOCKER_REGISTRY}/api_pedidos:latest
-
-                        echo "🚀 Pushing la imagen a Nexus..."
-                        docker push ${DOCKER_REGISTRY}/api_pedidos:latest
-                    """
-                }
+        stage('Push to Nexus') {
+            steps {
+                echo "Pushing image to Nexus..."
+                sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG"
             }
         }
 
