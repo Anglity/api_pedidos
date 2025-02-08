@@ -6,7 +6,7 @@ pipeline {
         DOCKER_TAG = "latest"
         SERVER_USER = "root"
         SERVER_IP = "167.71.164.51"
-        SSH_PASSPHRASE = "Angel2610" // Passphrase de la clave privada
+        SSH_PASSPHRASE = "Angel2610" // Passphrase de la clave privada;;;
     }
     stages {
         stage('Checkout') {
