@@ -34,7 +34,7 @@ pipeline {
         script {
             sshagent(credentials: ['ssh-server-credentials']) {
                 sh """
-                ssh -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'ENDSSH'
+                ssh -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_rsa $SERVER_USER@$SERVER_IP /bin/bash << 'ENDSSH'
                 docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
                 docker stop $DOCKER_IMAGE || true
                 docker rm $DOCKER_IMAGE || true
@@ -45,6 +45,6 @@ pipeline {
             }
         }
     }
-       }
+}
   }  
 }
