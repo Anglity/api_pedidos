@@ -29,21 +29,23 @@ pipeline {
                 sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG"
             }
         }
-      stage('Deploy to Server') {
+        stage('Deploy to Server') {
     steps {
         script {
             sshagent(credentials: ['ssh-server-credentials']) {
-                sh """
-                ssh -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_rsa $SERVER_USER@$SERVER_IP "
-                    docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG &&
-                    docker stop $DOCKER_IMAGE || true &&
-                    docker rm $DOCKER_IMAGE || true &&
-                    docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-                "
-                """
+                sh '''
+                ssh -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_rsa root@167.71.164.51 'bash -s' <<EOF
+                docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                docker stop $DOCKER_IMAGE || true
+                docker rm $DOCKER_IMAGE || true
+                docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                EOF
+                '''
             }
         }
     }
 }
+
+     
   }  
 }
