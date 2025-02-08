@@ -12,6 +12,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 echo "📥 Clonando código fuente desde GitHub..."
+                cleanWs() // Limpia el workspace antes del checkout
                 git branch: 'develop', url: 'https://github.com/Anglity/api_pedidos.git'
             }
         }
@@ -64,6 +65,15 @@ pipeline {
                     """
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "🎉 Pipeline completado exitosamente!"
+        }
+        failure {
+            echo "🚨 ERROR: Algo falló en el pipeline, revisa los logs!"
         }
     }
 }
