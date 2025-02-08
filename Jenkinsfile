@@ -5,7 +5,7 @@ pipeline {
         IMAGE_NAME = "167.71.164.51:8082/api_pedidos"
         DOCKER_REGISTRY = "167.71.164.51:8082"
         SERVER_IP = "167.71.164.51"
-        SSH_CREDENTIALS = "server-ssh-key"  // ID de las credenciales SSH en Jenkins
+        SSH_CREDENTIALS = "ssh-server-credentials"  // ID de las credenciales SSH en Jenkins
     }
 
     stages {
@@ -24,21 +24,19 @@ pipeline {
             }
         }
 
-        stage('Push Image to Nexus') {
+        stage('Login to Nexus') {
+            steps {
+                echo "🔑 Iniciando sesión en Nexus..."
+                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh "echo $NEXUS_PASS | docker login -u $NEXUS_USER --password-stdin ${DOCKER_REGISTRY}"
+                }
+            }
+        }
+
+        stage('Push to Nexus') {
             steps {
                 echo "📤 Subiendo imagen a Nexus..."
-                withCredentials([usernamePassword(credentialsId: 'nexus-cred', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
-                    sh """
-                        echo "🔑 Iniciando sesión en Nexus..."
-                        docker login -u $NEXUS_USER -p $NEXUS_PASS ${DOCKER_REGISTRY}
-
-                        echo "🏷️ Etiquetando la imagen para Nexus..."
-                        docker tag ${IMAGE_NAME}:latest ${DOCKER_REGISTRY}/api_pedidos:latest
-
-                        echo "🚀 Pushing la imagen a Nexus..."
-                        docker push ${DOCKER_REGISTRY}/api_pedidos:latest
-                    """
-                }
+                sh "docker push ${IMAGE_NAME}:latest"
             }
         }
 
@@ -49,7 +47,7 @@ pipeline {
                     sh """
                     ssh -o StrictHostKeyChecking=no root@${SERVER_IP} << 'EOF'
                     echo "📥 Pulling la última imagen de Docker..."
-                    docker pull ${DOCKER_REGISTRY}/api_pedidos:latest
+                    docker pull ${IMAGE_NAME}:latest
 
                     echo "🛑 Deteniendo el contenedor existente (si existe)..."
                     docker stop api_pedidos || true
@@ -58,7 +56,7 @@ pipeline {
                     docker rm api_pedidos || true
 
                     echo "🏃‍♂️ Iniciando nuevo contenedor..."
-                    docker run -d --restart unless-stopped --name api_pedidos -p 8000:8000 ${DOCKER_REGISTRY}/api_pedidos:latest
+                    docker run -d --restart unless-stopped --name api_pedidos -p 8000:8000 ${IMAGE_NAME}:latest
 
                     echo "✅ Despliegue completado exitosamente!"
                     EOF
