@@ -29,7 +29,7 @@ pipeline {
                 sh "docker push $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG"
             }
         }
-       stage('Deploy to Server') {
+      stage('Deploy to Server') {
     steps {
         script {
             sshagent(credentials: ['ssh-server-credentials']) {
