@@ -11,7 +11,6 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                echo "📥 Clonando código fuente desde GitHub..."
                 git branch: 'develop', url: 'https://github.com/Anglity/api_pedidos.git'
             }
         }
