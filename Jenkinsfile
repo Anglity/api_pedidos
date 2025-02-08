@@ -30,21 +30,21 @@ pipeline {
             }
         }
         stage('Deploy to Server') {
-            steps {
-                script {
-                    sshagent(credentials: ['ssh-server-credentials']) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'ENDSSH'
-                        docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-                        docker stop $DOCKER_IMAGE || true
-                        docker rm $DOCKER_IMAGE || true
-                        docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
-                        exit
-                        ENDSSH
-                        """
-                    }
-                }
+    steps {
+        script {
+            sshagent(credentials: ['ssh-server-credentials']) {
+                sh """
+                ssh -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'ENDSSH'
+                docker pull $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                docker stop $DOCKER_IMAGE || true
+                docker rm $DOCKER_IMAGE || true
+                docker run -d -p 8000:8000 --name $DOCKER_IMAGE $DOCKER_REGISTRY/$DOCKER_IMAGE:$DOCKER_TAG
+                exit
+                ENDSSH
+                """
             }
         }
     }
+       }
+  }  
 }
